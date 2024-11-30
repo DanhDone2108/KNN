@@ -1,24 +1,30 @@
-
+import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score, classification_report
-import joblib
+from sklearn.neighbors import KDTree
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
-def train_model(x, y, ngh=3):
-    #Tách dữ liệu của từng cột ra để train và test
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=42)
-    #khoi tao mo hinh
-    model = KNeighborsClassifier(n_neighbors=ngh)
-    #Huấn luyen mo hình
-    model.fit(x_train, y_train)
-    #Dự đoán Nhãn Cho Tập kiễm tra
-    y_pred = model.predict(x_test)
-    #Dánh gia mô hình sau khi kiểm tra
+# Function to train the KNN model
+def train_model(x, y, k=3):
+    # Split the dataset into training and testing sets
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+    # Initialize KDTree with training data
+    tree = KDTree(x_train)
+
+    # Predict on the test set using KDTree to find nearest neighbors
+    dist, ind = tree.query(x_test, k=k)  # Find k nearest neighbors
+
+    # Collect predictions based on nearest neighbors' votes
+    y_pred = []
+    for neighbors in ind:
+        votes = np.bincount(y_train[neighbors])  # Count votes for each class
+        y_pred.append(np.argmax(votes))  # Select the class with the highest votes
+
+    # Evaluate model performance
     accuracy = accuracy_score(y_test, y_pred)
-    #in do chinh xac của thuạt toan phan loai
     print("Accuracy: {:.2f}%".format(accuracy * 100.0))
-    report = (classification_report(y_test, y_pred))
-    # luu mo hinh sau khi phan tich xong
-    joblib.dump(model, 'knn_model.pkl')
 
-    return accuracy, report
+    report = classification_report(y_test, y_pred)
+    cm = confusion_matrix(y_test, y_pred)
+
+    return accuracy, report, cm
